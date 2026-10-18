@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+/* ページの土台（Claudeの公開ページが自動で付けていた部分） */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>凹のタスケテラップ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* 横向き一画面：左に「押している間だけ切りかわる」数字タブ、中央に凹、右にことばボタン9個 */
+:root{
+  --mint:#75fba4;      /* 凹の背景の緑 */
+  --mint-deep:#4fcf82;
+  --paper:#ffffff;     /* 凹の白 */
+  --ink:#1f3a5c;       /* 凹の線の紺 */
+  --ink-soft:#1f3a5c88;
+  --th:clamp(32px,10vh,88px); /* タイトル行の高さ */
+  --rowH:34px;                /* トラック行の高さ */
+  --title:#2b5e95;     /* 「タスケテ」の青 */
+  --hot:#ffe45c;       /* 押した瞬間だけ */
+  --f-hand:"Yusei Magic","Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;
+  --f-ui:"Zen Maru Gothic","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+  color-scheme:light;
+}
+/* 上の余白（閉じる・メニューボタンの帯）にタイトルを重ねる。タイトルは中央なので左右のボタンとは重ならない */
+:root{padding-top:0!important}
+html,body{height:100%}
+body{background:var(--mint);color:var(--ink);font-family:var(--f-ui);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;
+  padding-block:max(calc(var(--th) * .35 + 2px),calc(env(safe-area-inset-top,0px) - 64px)) 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+
+/* 手描き風の枠 */
+.wob{background:var(--paper);border:3px solid var(--ink);
+  border-radius:22px 14px 26px 12px / 14px 24px 12px 22px}
+
+header{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap}
+/* 行の高さは --th のまま。正面アイコンだけ上にはみ出させて大きく見せる */
+.titleRow{height:var(--th);display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;flex-basis:100%}
+.titleRow img{height:var(--th);width:auto;flex:none}
+h1{font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-weight:400;color:var(--title);font-size:min(calc(var(--th) * .85),5.2vw);line-height:1;margin:0;letter-spacing:.02em;white-space:nowrap}
+/* トラック行：旧BGMボタン行と同じ高さに固定 */
+.trackRow{height:var(--rowH);display:flex;align-items:center;gap:8px;min-width:0}
+.trackRow img{height:var(--rowH);width:auto;flex:none}
+/* トラック未選択のあいだの視線誘導：凹が傾く → 吹き出しが弾む → 1〜4が順に弾む、をループ */
+.trackRow.attract img{transform-origin:50% 90%;animation:tilt 3.4s ease-in-out infinite}
+.trackRow.attract .say{animation:hop 3.4s ease-out .7s infinite}
+.trackRow.attract #trk1{animation:hop 3.4s ease-out 1.15s infinite}
+.trackRow.attract #trk2{animation:hop 3.4s ease-out 1.4s infinite}
+.trackRow.attract #trk3{animation:hop 3.4s ease-out 1.65s infinite}
+.trackRow.attract #trk4{animation:hop 3.4s ease-out 1.9s infinite}
+@keyframes tilt{0%{transform:rotate(0)}9%{transform:rotate(-14deg)}18%,100%{transform:rotate(0)}}
+@keyframes hop{0%{transform:translateY(0)}4%{transform:translateY(-4px)}9%,100%{transform:translateY(0)}}
+.say{font-family:var(--f-hand);font-size:.95rem;padding:2px 12px;white-space:nowrap;line-height:1.3}
+.ctrl{font-family:var(--f-hand);font-size:1.05rem;color:var(--ink);cursor:pointer}
+.trk{height:var(--rowH);width:calc(var(--rowH) * 1.25);padding:0;display:grid;place-items:center}
+.ctrl[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.ctrl:focus-visible,.word:focus-visible,.tab:focus-visible{outline:3px dashed var(--ink);outline-offset:3px}
+
+main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:12px;min-height:0}
+
+.tabs{display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:6px;min-height:0;overflow:hidden}
+.tab{font-family:var(--f-hand);font-size:clamp(.9rem,4vh,1.4rem);padding:0;min-height:0;color:var(--ink);display:grid;place-items:center;cursor:pointer;touch-action:none}
+.tab.on{background:var(--ink);color:var(--paper)}
+
+.stage{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;place-items:center;min-height:0;overflow:hidden;container-type:inline-size}
+/* 待機中（デフォルトの絵）だけ上下に出すコピー */
+.ageTxt{display:none;font-family:"Dela Gothic One","Hiragino Sans",sans-serif;color:var(--title);font-size:min(9cqi,5.5vh);line-height:1.15;white-space:nowrap;padding-inline:6px}
+.ageTop{padding-top:6px;grid-row:1}.ageBot{padding-bottom:6px;grid-row:3}
+.stage .boko{grid-row:2}
+.stage.standby .ageTxt{display:block}
+.boko{height:min(72%,260px);aspect-ratio:1;max-width:90%;display:grid;place-items:center;text-align:center;
+  border:3px dashed var(--ink-soft);border-radius:50% 46% 52% 48%;color:var(--ink);font-size:.85rem;line-height:1.5;padding:12px;box-sizing:border-box;
+  transition:transform .08s}
+.boko img{width:100%;height:100%;object-fit:contain}
+.boko.hasImg{width:auto;height:auto;max-width:100%;align-self:stretch;justify-self:stretch;min-height:0;aspect-ratio:auto;border:none;border-radius:0;padding:2px;box-sizing:border-box;grid-template-rows:minmax(0,1fr)}
+.boko.hasImg img{min-height:0}
+/* 横長の絵（正立・寝てる・おやすみ・3人・スヤァ・みんな）は上に寄るので、吹き出しの下に来るよう下げる */
+.boko.hasImg.low{padding:62px 10px 8px}
+.boko.low img{object-position:50% 100%}
+.boko.pop{transform:scale(1.08) rotate(-3deg)}
+.bubble{position:absolute;top:10px;left:10px;right:10px;font-family:var(--f-hand);font-size:clamp(1rem,3vw,1.6rem);
+  text-align:center;padding:6px 10px;opacity:0;transition:opacity .25s}
+.bubble.show{opacity:1;transition:none}
+.pageLabel{position:absolute;bottom:8px;left:12px;font-family:var(--f-hand);font-size:.9rem}
+
+.words{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:clamp(4px,1.5vh,10px);min-height:0}
+.word{font-family:var(--f-hand);font-size:clamp(.9rem,2.4vw,1.35rem);color:var(--ink);padding:6px;cursor:pointer;touch-action:none;
+  display:grid;place-items:center;text-align:center;line-height:1.2;min-height:0;overflow:hidden;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;min-width:0}
+.word:nth-child(3n+2){border-radius:14px 26px 12px 22px / 24px 12px 22px 14px}
+.word:nth-child(3n){border-radius:26px 12px 22px 16px / 12px 22px 16px 26px}
+.word.hit{background:var(--hot);transform:scale(.96)}
+.word.empty{background:transparent;border-style:dashed;border-color:var(--ink-soft);color:var(--ink-soft);cursor:default;font-size:.8rem}
+
+/* クレジット：下の余白（10px）の中に重ねるだけなので、ほかの配置は動かない */
+.credit{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:env(safe-area-inset-bottom,0px);font-size:8px;line-height:10px;color:var(--ink);opacity:.75;pointer-events:none;white-space:nowrap;font-family:var(--f-ui)}
+.rotate{position:fixed;inset:0;background:var(--mint);display:none;place-content:center;justify-items:center;gap:20px;text-align:center;font-family:var(--f-hand);font-size:1.3rem;padding:24px;z-index:5}
+.rotate p{margin:0}
+/* 横向きにした凹が収まるよう正方形の箱の中で回す */
+.turnBox{width:min(62vw,280px);aspect-ratio:1;max-width:100%;display:grid;place-items:center}
+.turnBox img{width:100%;height:auto;animation:turn 3s ease-in-out infinite}
+/* 3秒ごと：立つ → 90°倒れる → しばらくそのまま → 起き上がる */
+@keyframes turn{0%,20%{transform:rotate(0)}45%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (orientation:portrait) and (max-width:700px){.rotate{display:grid}}
+@media (prefers-reduced-motion:reduce){.trackRow.attract *{animation:none!important}.boko,.word{transition:none}.boko.pop{transform:none}.turnBox img{animation:none;transform:rotate(-90deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="titleRow">
+      <img src="img/boko_turn.png" alt="凹（正面）">
+      <h1>凹（ボコ）のタスケテラップ</h1>
+      <img src="img/boko_back.png" alt="凹（うしろ姿）">
+    </div>
+    <div class="trackRow attract" id="trackRow">
+      <img src="img/boko_rero.png" alt="凹">
+      <span class="say wob">トラックを選んでね</span>
+      <button class="ctrl wob trk" id="trk1" aria-pressed="false">1</button>
+      <button class="ctrl wob trk" id="trk2" aria-pressed="false">2</button>
+      <button class="ctrl wob trk" id="trk3" aria-pressed="false">3</button>
+      <button class="ctrl wob trk" id="trk4" aria-pressed="false">4</button>
+    </div>
+  </header>
+  <main>
+    <nav class="tabs" id="tabs" aria-label="ことばのページ（押している間だけ切りかわる）"></nav>
+    <section class="stage wob standby" id="stage" aria-live="polite">
+      <div class="ageTxt ageTop">アゲテケ！！</div>
+      <div class="bubble wob" id="bubble"></div>
+      <div class="boko" id="boko">凹の絵<br>（素材をもらったら差し替え）</div>
+      <div class="ageTxt ageBot">フロア&amp;メンタル！！</div>
+    </section>
+    <section class="words" id="words"></section>
+  </main>
+</div>
+<div class="credit">All illust：@boco_u2(special thanks:@note_kurimo,@cottonmod)</div>
+<div class="rotate"><div class="turnBox"><img src="img/boko_turn.png" alt=""></div><p>スマホを横向きにしてね</p></div>
+
+<script>
+/* ===== ことばの表 =====
+   text: ボタンに出す文字 / say: 仮読み上げ用（省略可） / file: Artlist音声の相対パス（例 "voice/p1_01.mp3"）
+   file を入れるとその音声を優先して鳴らす。1ページ9個まで。 */
+const PAGES = [
+  [ // 1（Artlist音声）
+    {text:"鬱すぎる", file:"voice/p1_01.mp3", img:"img/boko_uzu.jpg"},
+    {text:"一回寝る", file:"voice/p1_02.mp3", img:"img/boko_nemu.jpg"},
+    {text:"長濱ねる", file:"voice/p1_03.mp3"},
+    {text:"寝る寝る\nネルネ", file:"voice/p1_04.mp3", img:"img/boko_nemu.jpg"},
+    {text:"豆腐\nメンタル", file:"voice/p1_05.mp3", img:"img/boko_uzu.jpg"},
+    {text:"生きづらい", file:"voice/p1_06.mp3", img:"img/boko_kage.jpg"},
+    {text:"滅", file:"voice/p1_07.mp3", img:"img/boko_uzu.jpg"},
+    {text:"寝る", file:"voice/p1_08.mp3", img:"img/boko_nightcap.jpg"},
+    {text:"凹", file:"voice/p1_09b.mp3", img:"img/boko_wink.jpg"},
+  ],
+  [ // 2（Artlist音声）
+    {text:"どうだ\nこれが", file:"voice/p2_01.mp3", img:"img/boko_dizzy.jpg"},
+    {text:"レッツ\nラップ", file:"voice/p2_02.mp3", img:"img/boko_dizzy.jpg"},
+    {text:"ヒップ\nホップ", file:"voice/p2_03.mp3", img:"img/boko_dizzy.jpg"},
+    {text:"きっと\nもっと", file:"voice/p2_04.mp3"},
+    {text:"キット\nカット", file:"voice/p2_05.mp3", img:"img/boko_bisho.jpg"},
+    {text:"いっそ\nもっと", file:"voice/p2_06.mp3"},
+    {text:"ノット\nグッド", file:"voice/p2_07.mp3", img:"img/boko_kage.jpg"},
+    {text:"ちょっと\nバッド", file:"voice/p2_08.mp3", img:"img/boko_yami.jpg"},
+    {text:"凹の\nラップ", file:"voice/p2_09.mp3", img:"img/boko_bisho.jpg"},
+  ],
+  [ // 3（Artlist音声）
+    {text:"さんぽ", file:"voice/p3_01.mp3", img:"img/boko_cafe.jpg"},
+    {text:"えらい", file:"voice/p3_02.mp3", img:"img/boko_dizzy.jpg"},
+    {text:"こめかみ", file:"voice/p3_03.mp3", img:"img/boko_nemu.jpg"},
+    {text:"ピクピク", file:"voice/p3_04.mp3", img:"img/boko_nemu.jpg"},
+    {text:"ねれない", file:"voice/p3_05.mp3", img:"img/boko_nightcap.jpg"},
+    {text:"おやすみ\n世界", file:"voice/p3_06.mp3"},
+    {text:"おはよう\n世界", file:"voice/p3_07.mp3", img:"img/boko_cafe.jpg"},
+    {text:"めざめる", file:"voice/p3_08.mp3", img:"img/boko_oyasumi.jpg"},
+    {text:"ひとりの\nおふとん", file:"voice/p3_09.mp3", img:"img/boko_nemu.jpg"},
+  ],
+  [ // 4（Artlist音声）
+    {text:"そして\nいつもの", file:"voice/p4_01.mp3"},
+    {text:"耐久\nファイト", file:"voice/p4_02.mp3", img:"img/boko_taikyu.jpg"},
+    {text:"眠れ\nナイト", file:"voice/p4_03.mp3", img:"img/boko_nightcap.jpg"},
+    {text:"オール\nナイト", file:"voice/p4_04.mp3", img:"img/boko_wink.jpg"},
+    {text:"眠ら\nナイト", file:"voice/p4_05.mp3", img:"img/boko_yami.jpg"},
+    {text:"止まら\nナイト", file:"voice/p4_06.mp3", img:"img/boko_uzu.jpg"},
+    {text:"朝が\nくるぞ", file:"voice/p4_07.mp3", img:"img/boko_oyasumi.jpg"},
+    {text:"夜は\nなげぇぞ", file:"voice/p4_08.mp3", img:"img/boko_kage.jpg"},
+    {text:"気には\nしないぞ", file:"voice/p4_09.mp3", img:"img/boko_dizzy.jpg"},
+  ],
+  [ // 5（Artlist音声）
+    {text:"レペゼン", file:"voice/p5_01.mp3", img:"img/boko_wink.jpg"},
+    {text:"ぼくたち", file:"voice/p5_02.mp3"},
+    {text:"同期", file:"voice/p5_03.mp3", img:"img/boko_minna.jpg"},
+    {text:"みんなで", file:"voice/p5_04.mp3", img:"img/boko_minna.jpg"},
+    {text:"のりきる", file:"voice/p5_05.mp3", img:"img/boko_taikyu.jpg"},
+    {text:"発信", file:"voice/p5_06.mp3", img:"img/boko_cafe.jpg"},
+    {text:"１０回", file:"voice/p5_07.mp3", img:"img/boko_10kai.jpg"},
+    {text:"１日", file:"voice/p5_08.mp3", img:"img/boko_taikyu.jpg"},
+    {text:"X", file:"voice/p5_09.mp3"},
+  ],
+  [ // 6（Artlist音声）
+    {text:"おかげで\nであえた", file:"voice/p6_01.mp3", img:"img/boko_bisho.jpg"},
+    {text:"いろんな\nひとたち", file:"voice/p6_02.mp3", img:"img/boko_minna.jpg"},
+    {text:"あたうる\nさんの", file:"voice/p6_03.mp3", img:"img/boko_atauru.jpg"},
+    {text:"チャレンジ\n企画", file:"voice/p6_04.mp3", img:"img/boko_minna.jpg"},
+    {text:"やって\nよかった", file:"voice/p6_05.mp3", img:"img/boko_bisho.jpg"},
+    {text:"やさしい\nつながり", file:"voice/p6_06.mp3", img:"img/boko_suya.jpg"},
+    {text:"ともだち\nふえたよ", file:"voice/p6_07.mp3", img:"img/boko_3nin.jpg"},
+    {text:"これが\nいまの", file:"voice/p6_08.mp3", img:"img/boko_cafe.jpg"},
+    {text:"みてるか\nむかしの", file:"voice/p6_09.mp3"},
+  ]
+];
+const BOKO_IMG = "img/boko_dj_v2.jpg"; // 挿絵のデフォルト
+
+/* ===== 画面 ===== */
+const tabsEl=document.getElementById('tabs'), wordsEl=document.getElementById('words');
+const bubble=document.getElementById('bubble'), boko=document.getElementById('boko');
+/* 挿絵：img のあることばを押すとその絵に替わる。押している間は文字と絵を出したまま。
+   離したら文字は TEXT_MS（押してから数えて）で消え、絵はそこから IMG_LAG 遅れて戻る。img のないことばを押すとすぐ戻る */
+const TEXT_MS = 500, IMG_LAG = 200;
+let imgTimer;
+let stageImg;
+if(BOKO_IMG){boko.innerHTML=`<img src="${BOKO_IMG}" alt="凹">`;boko.classList.add('hasImg');stageImg=boko.querySelector('img')}
+PAGES.flat().forEach(w=>{if(w.img)new Image().src=w.img});
+function setStage(src){document.getElementById('stage').classList.toggle('standby',src===BOKO_IMG);boko.classList.toggle('low',/boko_(turn|nemu|oyasumi|3nin|suya|minna|dizzy|atauru|taikyu|kage|yami|bisho|cafe|wink|nightcap|uzu|10kai)/.test(src));if(stageImg&&!stageImg.src.endsWith(src))stageImg.src=src}
+/* 曲が鳴っている間は、差分3コマを曲のテンポで1拍ごとにループ（デフォルトの絵は止まっているときだけ） */
+const DJ_FRAMES=['img/boko_dj_f1.jpg','img/boko_dj_f2.jpg','img/boko_dj_f3.jpg'];
+DJ_FRAMES.forEach(f=>{new Image().src=f});
+let frameIdx=0, frameTimer=null, wordImgOn=false;
+function baseImg(){return frameTimer?DJ_FRAMES[frameIdx]:BOKO_IMG}
+function startFrames(bpm){stopFrames();frameIdx=0;if(!wordImgOn)setStage(DJ_FRAMES[0]);frameTimer=setInterval(()=>{frameIdx=(frameIdx+1)%DJ_FRAMES.length;if(!wordImgOn)setStage(DJ_FRAMES[frameIdx])},60000/bpm)}
+function stopFrames(){clearInterval(frameTimer);frameTimer=null;frameIdx=0;if(!wordImgOn)setStage(BOKO_IMG)}
+
+let page=0; const held=new Map(); // pointerId -> page
+
+for(let i=0;i<6;i++){
+  const b=document.createElement('button');
+  b.className='tab wob'+(i===0?' on':''); b.id='tab'+(i+1); b.textContent=i+1;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);held.set(e.pointerId,i);setPage(i)});
+  const up=e=>{if(!held.has(e.pointerId))return;held.delete(e.pointerId);const rest=[...held.values()];setPage(rest.length?rest[rest.length-1]:0)};
+  b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);
+  b.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();setPage(i)}});
+  b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')setPage(0)});
+  tabsEl.appendChild(b);
+}
+function setPage(i){
+  if(i===page)return; page=i;
+  [...tabsEl.children].forEach((t,k)=>t.classList.toggle('on',k===i));
+  renderWords();
+}
+function renderWords(){
+  wordsEl.innerHTML='';
+  for(let k=0;k<9;k++){
+    const w=PAGES[page][k], b=document.createElement('button');
+    b.id=`w${page+1}_${k+1}`;
+    if(!w){b.className='word wob empty';b.textContent='未設定';b.tabIndex=-1;wordsEl.appendChild(b);continue}
+    b.className='word wob'; b.textContent=w.text;
+    b.addEventListener('pointerdown',e=>{e.preventDefault();hit(b,w,e.pointerId)});
+    b.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();hit(b,w,'key')}});
+    b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')releaseWord('key')});
+    wordsEl.appendChild(b);
+  }
+}
+let bubbleT, pressT=0, heldPid=null;
+function hit(btn,w,pid){
+  btn.classList.add('hit');setTimeout(()=>btn.classList.remove('hit'),110);
+  boko.classList.add('pop');setTimeout(()=>boko.classList.remove('pop'),90);
+  bubble.textContent=w.text.replace(/\n/g,'');bubble.classList.add('show');clearTimeout(bubbleT);clearTimeout(imgTimer);
+  pressT=performance.now(); heldPid=pid;
+  if(w.img){wordImgOn=true;setStage(w.img)}else{wordImgOn=false;setStage(baseImg())}
+  playWord(w);
+}
+/* 指を離したら：文字は押してから TEXT_MS で消え、絵はそこから少し遅れて戻る */
+function releaseWord(pid){
+  if(pid!==heldPid)return; heldPid=null;
+  const wait=Math.max(0,TEXT_MS-(performance.now()-pressT));
+  bubbleT=setTimeout(()=>bubble.classList.remove('show'),wait);
+  if(wordImgOn)imgTimer=setTimeout(()=>{wordImgOn=false;setStage(baseImg())},wait+IMG_LAG);
+}
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,e=>releaseWord(e.pointerId)));
+
+/* ===== 音 ===== */
+let ctx; const bufs={}; let lastSrc;
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();PAGES.flat().forEach(w=>w.file&&loadBuf(w.file))}if(ctx.state==='suspended')ctx.resume();return ctx}
+document.addEventListener('pointerdown',ac,{once:true,capture:true});
+function loadBuf(f){if(!bufs[f])bufs[f]=fetch(f).then(r=>r.arrayBuffer()).then(a=>ctx.decodeAudioData(a)).catch(()=>null);return bufs[f]}
+async function playWord(w){
+  ac();
+  if(w.file){const b=await loadBuf(w.file);if(b){try{lastSrc&&lastSrc.stop()}catch(e){}const s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start();lastSrc=s;return}}
+  if('speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(w.say||w.text);u.lang='ja-JP';u.rate=1.4;speechSynthesis.speak(u)}
+}
+/* トラック：1〜4を押すとその曲をループ再生。再生中の番号をもう一度押すと止まる */
+const TRACKS=['bgm/track1.mp3','bgm/track2.mp3','bgm/track3.mp3','bgm/track4.mp3'];
+const TRACK_BPM=[120,140,95,85]; // 曲の解析から出したおおよそのテンポ（コマ送りの速さ）
+const MUSIC_GAIN=0.5; // 曲は声より5dBほど大きいので少し下げておく
+let musicSrc=null, musicIdx=-1, musicTok=0;
+const trackBtns=[...document.querySelectorAll('.trk')];
+function markTrack(){trackBtns.forEach((b,k)=>b.setAttribute('aria-pressed',k===musicIdx));document.getElementById('trackRow').classList.toggle('attract',musicIdx<0)}
+function stopMusic(){try{musicSrc&&musicSrc.stop()}catch(e){}musicSrc=null;musicIdx=-1;musicTok++;markTrack();stopFrames()}
+async function playTrack(i){
+  ac();
+  if(i===musicIdx){stopMusic();return}
+  stopMusic(); musicIdx=i; markTrack(); const tok=musicTok;
+  let buf; try{buf=await fetch(TRACKS[i]).then(r=>r.arrayBuffer()).then(a=>ctx.decodeAudioData(a))}catch(e){if(tok===musicTok)stopMusic();return}
+  if(tok!==musicTok)return;
+  // 曲の頭と終わりの無音を飛ばしてつなぎ目を詰める
+  const d=buf.getChannelData(0), th=0.002; let a=0,b=d.length-1;
+  while(a<d.length&&Math.abs(d[a])<th)a++; while(b>a&&Math.abs(d[b])<th)b--;
+  const src=ctx.createBufferSource(), g=ctx.createGain(); g.gain.value=MUSIC_GAIN;
+  src.buffer=buf; src.loop=true; src.loopStart=a/buf.sampleRate; src.loopEnd=(b+1)/buf.sampleRate;
+  src.connect(g).connect(ctx.destination); src.start(0,src.loopStart); musicSrc=src; startFrames(TRACK_BPM[i]);
+}
+trackBtns.forEach((b,k)=>b.addEventListener('click',()=>playTrack(k)));
+
+renderWords();
+</script>
+
+</body>
+</html>
