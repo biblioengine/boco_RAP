@@ -50,7 +50,7 @@ header{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap}
 .titleRow img{height:var(--th);width:auto;flex:none}
 h1{font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-weight:400;color:var(--title);font-size:min(calc(var(--th) * .85),5.2vw);line-height:1;margin:0;letter-spacing:.02em;white-space:nowrap}
 /* トラック行：旧BGMボタン行と同じ高さに固定 */
-.trackRow{height:var(--rowH);display:flex;align-items:center;gap:8px;min-width:0}
+.trackRow{height:var(--rowH);display:flex;align-items:center;gap:8px;min-width:0;flex-basis:100%}
 .trackRow img{height:var(--rowH);width:auto;flex:none}
 /* トラック未選択のあいだの視線誘導：凹が傾く → 吹き出しが弾む → 1〜4が順に弾む、をループ */
 .trackRow.attract img{transform-origin:50% 90%;animation:tilt 3.4s ease-in-out infinite}
@@ -102,8 +102,8 @@ main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:
 .word.hit{background:var(--hot);transform:scale(.96)}
 .word.empty{background:transparent;border-style:dashed;border-color:var(--ink-soft);color:var(--ink-soft);cursor:default;font-size:.8rem}
 
-/* クレジット：下の余白（10px）の中に重ねるだけなので、ほかの配置は動かない */
-.credit{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:env(safe-area-inset-bottom,0px);font-size:8px;line-height:10px;color:var(--ink);opacity:.75;pointer-events:none;white-space:nowrap;font-family:var(--f-ui)}
+/* クレジット：トラック行の右端（9個のボタンの上の空き）。行の高さは変えない */
+.credit{margin-left:auto;align-self:flex-end;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:8px;line-height:10px;color:var(--ink);opacity:.75;white-space:nowrap;font-family:var(--f-ui)}
 .rotate{position:fixed;inset:0;background:var(--mint);display:none;place-content:center;justify-items:center;gap:20px;text-align:center;font-family:var(--f-hand);font-size:1.3rem;padding:24px;z-index:5}
 .rotate p{margin:0}
 /* 横向きにした凹が収まるよう正方形の箱の中で回す */
@@ -130,6 +130,7 @@ main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:
       <button class="ctrl wob trk" id="trk2" aria-pressed="false">2</button>
       <button class="ctrl wob trk" id="trk3" aria-pressed="false">3</button>
       <button class="ctrl wob trk" id="trk4" aria-pressed="false">4</button>
+      <span class="credit">All illust：@boco_u2(special thanks:@note_kurimo,@cottonmod)</span>
     </div>
   </header>
   <main>
@@ -143,7 +144,6 @@ main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:
     <section class="words" id="words"></section>
   </main>
 </div>
-<div class="credit">All illust：@boco_u2(special thanks:@note_kurimo,@cottonmod)</div>
 <div class="rotate"><div class="turnBox"><img src="img/boko_turn.png" alt=""></div><p>スマホを横向きにしてね</p></div>
 
 <script>
