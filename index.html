@@ -287,40 +287,37 @@ function releaseWord(pid){
 }
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,e=>releaseWord(e.pointerId)));
 
-/* ===== 音 =====
-   iPhoneの画面収録は Web Audio の音を正しく録れない（テストで確認済み）ため、
-   声も曲も普通の音声再生（<audio>）で鳴らす */
-const voiceEls={}; let lastEl=null;
-PAGES.flat().forEach(w=>{if(w.file&&!voiceEls[w.file]){const a=new Audio(w.file);a.preload='auto';a.setAttribute('playsinline','');voiceEls[w.file]=a}});
-function playWord(w){
-  if(w.file&&voiceEls[w.file]){
-    const a=voiceEls[w.file];
-    if(lastEl&&lastEl!==a){lastEl.pause();lastEl.currentTime=0}
-    a.muted=false; a.currentTime=0; a.play().catch(()=>{}); lastEl=a; return;
-  }
+/* ===== 音 ===== */
+let ctx; const bufs={}; let lastSrc;
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();PAGES.flat().forEach(w=>w.file&&loadBuf(w.file))}if(ctx.state==='suspended')ctx.resume();return ctx}
+document.addEventListener('pointerdown',ac,{once:true,capture:true});
+function loadBuf(f){if(!bufs[f])bufs[f]=fetch(f).then(r=>r.arrayBuffer()).then(a=>ctx.decodeAudioData(a)).catch(()=>null);return bufs[f]}
+async function playWord(w){
+  ac();
+  if(w.file){const b=await loadBuf(w.file);if(b){try{lastSrc&&lastSrc.stop()}catch(e){}const s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start();lastSrc=s;return}}
   if('speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(w.say||w.text);u.lang='ja-JP';u.rate=1.4;speechSynthesis.speak(u)}
 }
 /* トラック：1〜4を押すとその曲をループ再生。再生中の番号をもう一度押すと止まる
-   曲は前後の無音を削り、音量を半分（声より少し小さめ）にしたファイルを使う */
+   曲ファイル（loop1〜4）は、前後の無音を削って音量を半分にしてある */
 const TRACKS=['bgm/loop1.mp3','bgm/loop2.mp3','bgm/loop3.mp3','bgm/loop4.mp3'];
 const TRACK_BPM=[120,140,95,85]; // 曲の解析から出したおおよそのテンポ（コマ送りの速さ）
-const trackEls=TRACKS.map(f=>{const a=new Audio(f);a.preload='auto';a.loop=true;a.setAttribute('playsinline','');return a});
-let musicIdx=-1;
+let musicSrc=null, musicIdx=-1, musicTok=0;
 const trackBtns=[...document.querySelectorAll('.trk')];
 function markTrack(){trackBtns.forEach((b,k)=>b.setAttribute('aria-pressed',k===musicIdx));document.getElementById('trackRow').classList.toggle('attract',musicIdx<0)}
-function stopMusic(){if(musicIdx>=0){const a=trackEls[musicIdx];a.pause();a.currentTime=0}musicIdx=-1;markTrack();stopFrames()}
-function playTrack(i){
+function stopMusic(){try{musicSrc&&musicSrc.stop()}catch(e){}musicSrc=null;musicIdx=-1;musicTok++;markTrack();stopFrames()}
+async function playTrack(i){
+  ac();
   if(i===musicIdx){stopMusic();return}
-  stopMusic(); musicIdx=i; markTrack();
-  const a=trackEls[i]; a.currentTime=0;
-  const ok=()=>{if(musicIdx===i)startFrames(TRACK_BPM[i])};
-  a.play().then(ok).catch(err=>{
-    // 一度だけ読み込み直してから再生し直す。それでもダメなら理由を吹き出しに出す（確認用）
-    a.load(); a.play().then(ok).catch(err2=>{if(musicIdx===i)stopMusic();showSay('再生エラー：'+(err2&&err2.name||err&&err.name||'不明'))});
-  });
+  stopMusic(); musicIdx=i; markTrack(); const tok=musicTok;
+  let buf; try{buf=await fetch(TRACKS[i]).then(r=>r.arrayBuffer()).then(a=>ctx.decodeAudioData(a))}catch(e){if(tok===musicTok)stopMusic();return}
+  if(tok!==musicTok)return;
+  // 曲の頭と終わりの無音を飛ばしてつなぎ目を詰める
+  const d=buf.getChannelData(0), th=0.002; let a=0,b=d.length-1;
+  while(a<d.length&&Math.abs(d[a])<th)a++; while(b>a&&Math.abs(d[b])<th)b--;
+  const src=ctx.createBufferSource();
+  src.buffer=buf; src.loop=true; src.loopStart=a/buf.sampleRate; src.loopEnd=(b+1)/buf.sampleRate;
+  src.connect(ctx.destination); src.start(0,src.loopStart); musicSrc=src; startFrames(TRACK_BPM[i]);
 }
-const sayEl=document.querySelector('.say'), sayText=sayEl.textContent; let sayT;
-function showSay(t){sayEl.textContent=t;clearTimeout(sayT);sayT=setTimeout(()=>{sayEl.textContent=sayText},4000)}
 trackBtns.forEach((b,k)=>b.addEventListener('click',()=>playTrack(k)));
 
 renderWords();
