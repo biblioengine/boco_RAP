@@ -203,7 +203,7 @@ const PAGES = [
     {text:"凹の\nラップ", file:"voice/p2_09.mp3", img:"img/boko_bisho.jpg"},
   ],
   [ // 3（Artlist音声）
-    {text:"さんぽ", file:"voice/p3_01.mp3", img:"img/boko_cafe.jpg"},
+    {text:"さんぽ", file:"voice/p3_01.mp3", img:"img/boko_sanpo.jpg"},
     {text:"えらい", file:"voice/p3_02.mp3", img:"img/boko_dizzy.jpg"},
     {text:"こめかみ", file:"voice/p3_03.mp3", img:"img/boko_nemu.jpg"},
     {text:"ピクピク", file:"voice/p3_04.mp3", img:"img/boko_nemu.jpg"},
@@ -259,7 +259,7 @@ let imgTimer;
 let stageImg;
 if(BOKO_IMG){boko.innerHTML=`<img src="${BOKO_IMG}" alt="凹">`;boko.classList.add('hasImg');stageImg=boko.querySelector('img')}
 PAGES.flat().forEach(w=>{if(w.img)new Image().src=w.img});
-function setStage(src){document.getElementById('stage').classList.toggle('standby',src===BOKO_IMG);boko.classList.toggle('low',/boko_(turn|nemu|oyasumi|3nin|suya|minna|dizzy|atauru|taikyu|kage|yami|bisho|cafe|wink|nightcap|uzu|10kai)/.test(src));if(stageImg&&!stageImg.src.endsWith(src))stageImg.src=src}
+function setStage(src){document.getElementById('stage').classList.toggle('standby',src===BOKO_IMG);boko.classList.toggle('low',/boko_(turn|nemu|oyasumi|3nin|suya|minna|dizzy|atauru|taikyu|kage|yami|bisho|cafe|wink|nightcap|uzu|10kai|sanpo)/.test(src));if(stageImg&&!stageImg.src.endsWith(src))stageImg.src=src}
 /* 曲が鳴っている間は、差分3コマを曲のテンポで1拍ごとにループ（デフォルトの絵は止まっているときだけ） */
 const DJ_FRAMES=['img/boko_dj_f1.jpg','img/boko_dj_f2.jpg','img/boko_dj_f3.jpg'];
 DJ_FRAMES.forEach(f=>{new Image().src=f});
