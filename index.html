@@ -129,6 +129,9 @@ html.vmode .trackRow .credit{display:none}
 html.vmode main{grid-template-columns:52px minmax(0,1fr) 52px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:10px}
 html.vmode .tabs{display:contents}
 html.vmode .tab{font-size:1.3rem}
+/* 縦向きのとき：選択中の紺色はやめて、押している間だけ黄色にする */
+html.vmode .tab.on{background:var(--paper);color:var(--ink)}
+html.vmode .tab.held{background:var(--hot);color:var(--ink)}
 .tabCol{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;min-height:0;grid-row:1}
 .tabCol.l{grid-column:1}.tabCol.r{grid-column:3}
 html.vmode .stage{grid-column:2;grid-row:1}
@@ -376,6 +379,10 @@ renderWords();
     main.prepend(L); main.appendChild(R); fit();
   }
   document.getElementById('vBtn').addEventListener('click',enter);
+  // 押しているタブ（指・キー）に held を付ける
+  function markHeld(){const v=new Set(held.values());document.querySelectorAll('.tab').forEach((t,k)=>t.classList.toggle('held',v.has(k)))}
+  ['pointerdown','pointerup','pointercancel','keydown','keyup'].forEach(t=>document.addEventListener(t,markHeld));
+  addEventListener('blur',markHeld);
   addEventListener('resize',fit);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
 })();
