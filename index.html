@@ -290,14 +290,8 @@ function releaseWord(pid){
 /* ===== 音 =====
    iPhoneの画面収録は Web Audio の音を正しく録れない（テストで確認済み）ため、
    声も曲も普通の音声再生（<audio>）で鳴らす */
-const voiceEls={}; let lastEl=null, primed=false;
+const voiceEls={}; let lastEl=null;
 PAGES.flat().forEach(w=>{if(w.file&&!voiceEls[w.file]){const a=new Audio(w.file);a.preload='auto';a.setAttribute('playsinline','');voiceEls[w.file]=a}});
-/* 最初に画面を触ったとき、全部の音を無音で一瞬だけ再生して準備しておく（押した瞬間に鳴りやすくする） */
-function prime(){
-  if(primed)return; primed=true;
-  Object.values(voiceEls).forEach(a=>{a.muted=true;const p=a.play();if(p)p.then(()=>{if(a===lastEl){a.muted=false;return}a.pause();a.currentTime=0;a.muted=false}).catch(()=>{a.muted=false})});
-}
-document.addEventListener('pointerdown',prime,{once:true,capture:true});
 function playWord(w){
   if(w.file&&voiceEls[w.file]){
     const a=voiceEls[w.file];
@@ -318,9 +312,15 @@ function stopMusic(){if(musicIdx>=0){const a=trackEls[musicIdx];a.pause();a.curr
 function playTrack(i){
   if(i===musicIdx){stopMusic();return}
   stopMusic(); musicIdx=i; markTrack();
-  const a=trackEls[i]; a.muted=false; a.currentTime=0;
-  a.play().then(()=>{if(musicIdx===i)startFrames(TRACK_BPM[i])}).catch(()=>{if(musicIdx===i)stopMusic()});
+  const a=trackEls[i]; a.currentTime=0;
+  const ok=()=>{if(musicIdx===i)startFrames(TRACK_BPM[i])};
+  a.play().then(ok).catch(err=>{
+    // 一度だけ読み込み直してから再生し直す。それでもダメなら理由を吹き出しに出す（確認用）
+    a.load(); a.play().then(ok).catch(err2=>{if(musicIdx===i)stopMusic();showSay('再生エラー：'+(err2&&err2.name||err&&err.name||'不明'))});
+  });
 }
+const sayEl=document.querySelector('.say'), sayText=sayEl.textContent; let sayT;
+function showSay(t){sayEl.textContent=t;clearTimeout(sayT);sayT=setTimeout(()=>{sayEl.textContent=sayText},4000)}
 trackBtns.forEach((b,k)=>b.addEventListener('click',()=>playTrack(k)));
 
 renderWords();
