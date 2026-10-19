@@ -112,6 +112,31 @@ main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:
 /* 3秒ごと：立つ → 90°倒れる → しばらくそのまま → 起き上がる */
 @keyframes turn{0%,20%{transform:rotate(0)}45%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
 @media (orientation:portrait) and (max-width:700px){.rotate{display:grid}}
+/* ===== 縦向きプレイ（「縦向きのままでプレイする」を押したあとは、スマホの向きに関係なくこの配置） =====
+   上からタイトル → レロレロ凹とトラック選択 → [1,2,3｜絵の枠｜4,5,6] → ことば9個 */
+.rotBtn{font-family:var(--f-hand);font-size:1.1rem;color:var(--ink);background:var(--paper);padding:10px 22px;cursor:pointer}
+.rotBtn:active{background:var(--hot)}
+.rotNote{font-size:.8rem;margin-top:-12px}
+html.vmode .rotate{display:none!important}
+html.vmode{--th:clamp(28px,6vh,56px);--rowH:30px}
+html.vmode .titleRow{gap:4px;min-width:0;max-width:100%;justify-content:flex-start;height:auto}
+html.vmode .titleRow img{display:none}
+html.vmode h1{line-height:1.15}
+html.vmode .trackRow{gap:6px;justify-content:flex-start}
+html.vmode .say{font-size:.8rem;padding:2px 8px}
+html.vmode .trk{width:calc(var(--rowH) * 1.15)}
+html.vmode .trackRow .credit{display:none}
+html.vmode main{grid-template-columns:52px minmax(0,1fr) 52px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:10px}
+html.vmode .tabs{display:contents}
+html.vmode .tab{font-size:1.3rem}
+.tabCol{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;min-height:0;grid-row:1}
+.tabCol.l{grid-column:1}.tabCol.r{grid-column:3}
+html.vmode .stage{grid-column:2;grid-row:1}
+html.vmode .words{grid-column:1 / -1;grid-row:2}
+html.vmode .word{font-size:min(4.6vmin,1.5rem);white-space:pre;padding:4px}
+.creditP{display:none;text-align:center;font-size:8px;line-height:10px;opacity:.75;font-family:var(--f-ui);color:var(--ink);padding-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html.vmode .creditP{display:block}
+
 @media (prefers-reduced-motion:reduce){.trackRow.attract *{animation:none!important}.boko,.word{transition:none}.boko.pop{transform:none}.turnBox img{animation:none;transform:rotate(-90deg)}}
 </style>
 </head>
@@ -143,8 +168,9 @@ main{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.35fr);gap:
     </section>
     <section class="words" id="words"></section>
   </main>
+  <div class="creditP">All illust：@boco_u2(special thanks:@note_kurimo,@cottonmod)</div>
 </div>
-<div class="rotate"><div class="turnBox"><img src="img/boko_turn.png" alt=""></div><p>スマホを横向きにしてね</p></div>
+<div class="rotate"><div class="turnBox"><img src="img/boko_turn.png" alt=""></div><p>スマホを横向きにしてね</p><button class="rotBtn wob" id="vBtn">縦向きのままでプレイする</button><p class="rotNote">Xからの人は縦向きプレイを選んでね</p></div>
 
 <script>
 /* ===== ことばの表 =====
@@ -332,6 +358,27 @@ async function playTrack(i){
 trackBtns.forEach((b,k)=>b.addEventListener('click',()=>playTrack(k)));
 
 renderWords();
+
+/* ===== 縦向きプレイ ===== */
+(function(){
+  const root=document.documentElement, tabs=document.getElementById('tabs'), main=tabs.parentElement, h=document.querySelector('h1');
+  const L=document.createElement('div'),R=document.createElement('div');L.className='tabCol l';R.className='tabCol r';
+  // タイトルの文字を、行の幅いっぱいになる大きさに合わせる
+  function fit(){
+    if(!root.classList.contains('vmode')){h.style.fontSize='';return}
+    const box=h.parentElement.clientWidth; h.style.fontSize='20px';
+    const w=h.scrollWidth; if(w>0) h.style.fontSize=Math.min(44,Math.floor(20*box/w*0.98))+'px';
+  }
+  function enter(){
+    root.classList.add('vmode');
+    const btns=[...document.querySelectorAll('.tab')];
+    btns.slice(0,3).forEach(b=>L.appendChild(b)); btns.slice(3).forEach(b=>R.appendChild(b));
+    main.prepend(L); main.appendChild(R); fit();
+  }
+  document.getElementById('vBtn').addEventListener('click',enter);
+  addEventListener('resize',fit);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+})();
 </script>
 
 </body>
