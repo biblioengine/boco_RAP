@@ -251,6 +251,17 @@ for(let i=0;i<6;i++){
   b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')setPage(0)});
   tabsEl.appendChild(b);
 }
+/* パソコン用：キーボードの 1〜6 を押している間、そのページに切り替わる（左のタブと同じ動き） */
+const KEY_PAGE={Digit1:0,Digit2:1,Digit3:2,Digit4:3,Digit5:4,Digit6:5,Numpad1:0,Numpad2:1,Numpad3:2,Numpad4:3,Numpad5:4,Numpad6:5};
+document.addEventListener('keydown',e=>{
+  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||!(e.code in KEY_PAGE))return;
+  e.preventDefault(); const id='key:'+e.code; held.delete(id); held.set(id,KEY_PAGE[e.code]); setPage(KEY_PAGE[e.code]);
+});
+document.addEventListener('keyup',e=>{
+  const id='key:'+e.code; if(!held.has(id))return;
+  held.delete(id); const rest=[...held.values()]; setPage(rest.length?rest[rest.length-1]:0);
+});
+window.addEventListener('blur',()=>{[...held.keys()].forEach(k=>{if(String(k).startsWith('key:'))held.delete(k)});const rest=[...held.values()];setPage(rest.length?rest[rest.length-1]:0)});
 function setPage(i){
   if(i===page)return; page=i;
   [...tabsEl.children].forEach((t,k)=>t.classList.toggle('on',k===i));
